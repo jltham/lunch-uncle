@@ -1,5 +1,6 @@
 import { buildSystemPrompt } from "./prompt.js";
 import { toolDefinitions, executeTool } from "./tools.js";
+import { buildCards } from "./cards.js";
 
 // TODO: set the base URL and model for your OpenAI-compatible provider.
 const LLM_BASE_URL = "TODO";
@@ -25,7 +26,10 @@ export function llmConfigError(baseUrl, model) {
 }
 
 /**
- * Run the agentic loop for one user turn and return Uncle's reply.
+ * Run the agentic loop for one user turn.
+ *
+ * Returns {reply, places, weather}: Uncle's text plus the cards built from
+ * this turn's tool results (see cards.js).
  *
  * history is the prior conversation as OpenAI-style {role, content} messages.
  */
@@ -45,6 +49,9 @@ export async function runLoop(history, message, env) {
   // so the OpenCode Go endpoint can route and cache consistently.
   const sessionId = crypto.randomUUID();
 
+  // Parsed tool results from this turn, for the cards under the reply.
+  const toolResults = [];
+
   let round = 0;
   while (round < MAX_ROUNDS) {
     const assistant = await callModel(messages, env, sessionId);
@@ -52,22 +59,29 @@ export async function runLoop(history, message, env) {
 
     const toolCalls = assistant.tool_calls ?? [];
     if (toolCalls.length === 0) {
-      return assistant.content ?? "";
+      const reply = assistant.content ?? "";
+      return { reply, ...buildCards(reply, toolResults) };
     }
 
     for (const call of toolCalls) {
       const args = parseArgs(call.function.arguments);
       console.log(`round ${round}: ${call.function.name}`, args);
       const result = await executeTool(call.function.name, args, env);
+      toolResults.push({ name: call.function.name, result: parseArgs(result) });
       messages.push({
         role: "tool",
         tool_call_id: call.id,
         content: result,
       });
     }
+    round++;
   }
 
-  return "Uncle tried too many times already. Ask something simpler.";
+  return {
+    reply: "Uncle tried too many times already. Ask something simpler.",
+    places: [],
+    weather: null,
+  };
 }
 
 async function callModel(messages, env, sessionId) {

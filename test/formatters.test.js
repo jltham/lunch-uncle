@@ -5,6 +5,7 @@ import {
   formatBusArrivals,
   haversineMetres,
   buildPlacesRequest,
+  formatPlaces,
   CT_HUB_2,
 } from "../src/tools.js";
 
@@ -56,6 +57,33 @@ test("haversineMetres measures CT Hub 2 to Lavender MRT at under 600 m", () => {
   const lavenderMrt = { latitude: 1.3073, longitude: 103.8631 };
   const distance = haversineMetres(ctHub2, lavenderMrt);
   assert.ok(distance > 400 && distance < 550, `got ${distance}`);
+});
+
+test("formatPlaces keeps the id and open-now flag, and copes with missing fields", () => {
+  const out = formatPlaces(
+    [
+      {
+        id: "ChIJ1",
+        displayName: { text: "Swee Choon" },
+        rating: 4.4,
+        location: { latitude: 1.3073, longitude: 103.8631 },
+        currentOpeningHours: { openNow: false },
+      },
+      { displayName: { text: "No Location Stall" } },
+    ],
+    CT_HUB_2,
+  );
+
+  assert.equal(out[0].id, "ChIJ1");
+  assert.equal(out[0].open_now, false);
+  assert.ok(out[0].distance_m > 400 && out[0].distance_m < 550);
+  assert.deepEqual(out[1], {
+    id: null,
+    name: "No Location Stall",
+    rating: null,
+    distance_m: null,
+    open_now: null,
+  });
 });
 
 test("buildPlacesRequest centres the search on CT Hub 2", () => {
