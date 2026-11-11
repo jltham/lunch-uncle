@@ -2,9 +2,15 @@
 
 Lunch Uncle is a chatbot that tells you where to eat lunch near CT Hub 2, Lavender, Singapore. Uncle speaks casual Singaporean English, and he has strong opinions about where you should go.
 
+<p align="center">
+  <img src="docs/lunch-uncle-demo.gif" alt="Lunch Uncle on a phone: asking for aircon, chicken rice and whether it will rain, with place cards and a weather pill under Uncle's replies" width="320">
+</p>
+
+<p align="center"><a href="docs/lunch-uncle-demo.webm">Watch the full-resolution video</a></p>
+
 ## Architecture
 
-Lunch Uncle runs as a single Cloudflare Worker. `src/index.js` routes requests: `GET /` serves the chat page from `src/ui.html`, and `POST /chat` hands the turn to the agentic loop in `src/loop.js`. The loop calls an OpenAI-compatible chat completions endpoint, passing the tool definitions from `src/tools.js`. When the model asks for a tool call, the loop runs it, appends the result to the message list, and calls the model again. This repeats until the model gives a final answer with no more tool calls. `src/prompt.js` builds the system prompt that sets Uncle's persona and rules. There are three tools: `find_lunch_places`, which queries the Google Places API (New) Text Search, biased towards CT Hub 2; `get_rain_forecast`, which reads the two-hour forecast from data.gov.sg (no key needed); and `get_bus_arrivals`, which reads live arrivals from arrivelah (no key needed).
+Lunch Uncle runs as a single Cloudflare Worker. `src/index.js` routes requests: `GET /` serves the chat page from `src/ui.html`, and `POST /chat` hands the turn to the agentic loop in `src/loop.js`. The loop calls an OpenAI-compatible chat completions endpoint, passing the tool definitions from `src/tools.js`. When the model asks for a tool call, the loop runs it, appends the result to the message list, and calls the model again. This repeats until the model gives a final answer with no more tool calls. `src/prompt.js` builds the system prompt that sets Uncle's persona and rules. There are three tools: `find_lunch_places`, which queries the Google Places API (New) Text Search, biased towards CT Hub 2; `get_rain_forecast`, which reads the two-hour forecast from data.gov.sg (no key needed); and `get_bus_arrivals`, which reads live arrivals from arrivelah (no key needed). After the final answer, `src/cards.js` turns the turn's tool results into cards for the page: a card for each place Uncle names, in his order, and the rain forecast. The page sends back the cards it has already shown, so a place Uncle names again in a later turn still gets a card.
 
 ## Request flow
 
@@ -15,7 +21,7 @@ sequenceDiagram
     participant LLM
     participant Tools as Tools (Places / data.gov.sg / arrivelah)
 
-    Browser->>Worker: POST /chat {message, history}
+    Browser->>Worker: POST /chat {message, history, places}
     Worker->>LLM: chat completion + tool definitions
     loop Until final answer
         LLM-->>Worker: tool calls
@@ -24,7 +30,7 @@ sequenceDiagram
         Worker->>LLM: chat completion + tool results
     end
     LLM-->>Worker: final reply
-    Worker-->>Browser: {reply}
+    Worker-->>Browser: {reply, places, weather}
 ```
 
 ## Setup
