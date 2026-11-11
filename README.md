@@ -42,7 +42,7 @@ sequenceDiagram
    OPENCODE_API_KEY=your-key-here
    GOOGLE_PLACES_API_KEY=your-key-here
    ```
-4. Fill in the two `TODO` constants at the top of `src/loop.js`: `LLM_BASE_URL` and `LLM_MODEL`, for the OpenCode Go endpoint and model. The Go endpoint requires an `x-opencode-session` header, which `callModel` already sends.
+4. Fill in the two `TODO` constants at the top of `src/loop.js`: `LLM_BASE_URL` and `LLM_MODEL`, for the OpenCode Go endpoint and model. Set the base URL without the trailing `/chat/completions`, which `callModel` adds itself. The Go endpoint requires an `x-opencode-session` header, which `callModel` already sends.
 5. Start the dev server:
    ```sh
    npm run dev

@@ -8,8 +8,21 @@ const LLM_MODEL = "TODO";
 const LLM_TIMEOUT_MS = 20_000;
 const MAX_ROUNDS = 8;
 
-const FALLBACK_REPLY = "Just go Berseh Food Centre lah.";
-const FOOD_WORDS = /\b(eat|lunch|food|makan|hungry|restaurant|hawker)\b/i;
+/**
+ * Explain what is wrong with the LLM settings, or return null if they look usable.
+ */
+export function llmConfigError(baseUrl, model) {
+  if (!baseUrl || baseUrl === "TODO") {
+    return "LLM_BASE_URL is not set in src/loop.js. See README step 4.";
+  }
+  if (!model || model === "TODO") {
+    return "LLM_MODEL is not set in src/loop.js. See README step 4.";
+  }
+  if (/\/chat\/completions\/?$/.test(baseUrl)) {
+    return "LLM_BASE_URL should end before /chat/completions, which callModel adds itself.";
+  }
+  return null;
+}
 
 /**
  * Run the agentic loop for one user turn and return Uncle's reply.
@@ -17,9 +30,9 @@ const FOOD_WORDS = /\b(eat|lunch|food|makan|hungry|restaurant|hawker)\b/i;
  * history is the prior conversation as OpenAI-style {role, content} messages.
  */
 export async function runLoop(history, message, env) {
-  // If the Places key is missing, Uncle cannot search, so give a safe answer.
-  if (!env.GOOGLE_PLACES_API_KEY || FOOD_WORDS.test(message)) {
-    return FALLBACK_REPLY;
+  const configError = llmConfigError(LLM_BASE_URL, LLM_MODEL);
+  if (configError) {
+    throw new Error(configError);
   }
 
   const messages = [
