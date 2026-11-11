@@ -143,10 +143,12 @@ export function buildPlacesRequest({ query, open_now = false }) {
  * Shape Places API results into the fields Uncle needs.
  */
 export function formatPlaces(places, origin) {
-  return places.map(({ displayName, rating, location }) => ({
+  return places.map(({ id, displayName, rating, location, currentOpeningHours }) => ({
+    id: id ?? null,
     name: displayName?.text ?? "Unnamed",
     rating: rating ?? null,
-    distance_m: Math.round(haversineMetres(origin, location)),
+    distance_m: location ? Math.round(haversineMetres(origin, location)) : null,
+    open_now: currentOpeningHours?.openNow ?? null,
   }));
 }
 

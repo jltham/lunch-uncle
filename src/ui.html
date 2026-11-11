@@ -2,92 +2,392 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1F6B4F">
   <title>Lunch Uncle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
   <style>
-    :root { --uncle: #fde68a; --you: #dbeafe; --ink: #1f2937; }
+    /* Kopitiam palette: marble tabletop, tile green, signboard yellow, chilli red. */
+    :root {
+      --bg: #E9ECE7;
+      --surface: #FFFFFF;
+      --ink: #23201C;
+      --muted: #5E625C;
+      --line: #D3D8D1;
+      --green: #1F6B4F;
+      --on-green: #FFF6D6;
+      --uncle: #FCEBB0;
+      --uncle-ink: #2B2414;
+      --chilli: #B3261E;
+      --chilli-bg: #FBE4E1;
+      --display: "Bricolage Grotesque", system-ui, sans-serif;
+      --body: system-ui, -apple-system, "Segoe UI", sans-serif;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #141A17;
+        --surface: #1E2622;
+        --ink: #EDEFEA;
+        --muted: #A3ABA4;
+        --line: #2F3A34;
+        --green: #2F8A64;
+        --on-green: #FFF6D6;
+        --uncle: #3B3418;
+        --uncle-ink: #F7E7B0;
+        --chilli: #F2877F;
+        --chilli-bg: #3A1F1C;
+        color-scheme: dark;
+      }
+    }
+
     * { box-sizing: border-box; }
+    html, body { height: 100%; }
     body {
-      margin: 0; font-family: system-ui, sans-serif; color: var(--ink);
-      background: #f9fafb; display: flex; flex-direction: column; height: 100vh;
+      margin: 0; height: 100dvh;
+      display: grid; grid-template-rows: auto 1fr auto;
+      background: var(--bg); color: var(--ink);
+      font: 1rem/1.5 var(--body);
     }
-    header { padding: 1rem; background: #fff; border-bottom: 1px solid #e5e7eb; }
-    header h1 { margin: 0; font-size: 1.25rem; }
-    header p { margin: .25rem 0 0; color: #6b7280; font-size: .875rem; }
-    #chat { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: .5rem; }
+    .column { width: 100%; max-width: 40rem; margin: 0 auto; padding: 0 16px; }
+    :focus-visible { outline: 3px solid var(--green); outline-offset: 2px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+    /* Header */
+    header { background: var(--surface); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top); }
+    header .column { display: flex; align-items: center; gap: .75rem; padding-block: .75rem; }
+    .avatar {
+      flex: none; width: 2.75rem; height: 2.75rem; border-radius: 50%;
+      display: grid; place-items: center;
+      background: var(--green); color: var(--on-green);
+      font: 800 1.35rem/1 var(--display);
+    }
+    .title { flex: 1; min-width: 0; }
+    .title h1 { margin: 0; font: 800 1.35rem/1.1 var(--display); letter-spacing: -.01em; }
+    .title p { margin: .1rem 0 0; color: var(--muted); font-size: .875rem; }
+    .ghost {
+      flex: none; min-height: 2.75rem; padding: 0 .9rem;
+      border: 1px solid var(--line); border-radius: 999px;
+      background: transparent; color: var(--ink); font: inherit; font-size: .875rem; cursor: pointer;
+    }
+    .ghost:hover { border-color: var(--muted); }
+
+    /* Conversation */
+    #scroller { overflow-y: auto; overscroll-behavior: contain; }
+    #chat { display: flex; flex-direction: column; gap: .75rem; padding-block: 1rem 1.5rem; }
+    .msg { display: flex; flex-direction: column; gap: .5rem; max-width: 85%; }
+    .msg.you { align-self: flex-end; align-items: flex-end; }
+    .msg.uncle { align-self: flex-start; }
     .bubble {
-      max-width: 75%; padding: .6rem .9rem; border-radius: 1rem; line-height: 1.4;
-      white-space: pre-wrap; word-wrap: break-word;
+      padding: .6rem .9rem; border-radius: 1.1rem;
+      white-space: pre-wrap; overflow-wrap: anywhere;
     }
-    .uncle { background: var(--uncle); align-self: flex-start; border-bottom-left-radius: .25rem; }
-    .you { background: var(--you); align-self: flex-end; border-bottom-right-radius: .25rem; }
-    form { display: flex; gap: .5rem; padding: 1rem; background: #fff; border-top: 1px solid #e5e7eb; }
-    input { flex: 1; padding: .6rem .9rem; font-size: 1rem; border: 1px solid #d1d5db; border-radius: .5rem; }
-    button { padding: .6rem 1.2rem; font-size: 1rem; border: 0; border-radius: .5rem; background: var(--ink); color: #fff; cursor: pointer; }
-    button:disabled { opacity: .5; cursor: default; }
+    .uncle .bubble { background: var(--uncle); color: var(--uncle-ink); border-bottom-left-radius: .3rem; }
+    .you .bubble { background: var(--green); color: var(--on-green); border-bottom-right-radius: .3rem; }
+    .error .bubble { background: var(--chilli-bg); color: var(--ink); border: 1px solid var(--chilli); }
+    .error .ghost { align-self: flex-start; border-color: var(--chilli); color: var(--chilli); }
+
+    /* Typing dots */
+    .dots { display: inline-flex; gap: .3rem; padding-block: .35rem; }
+    .dots i { width: .45rem; height: .45rem; border-radius: 50%; background: currentColor; opacity: .35; animation: blink 1.2s infinite; }
+    .dots i:nth-child(2) { animation-delay: .2s; }
+    .dots i:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink { 30% { opacity: 1; } }
+
+    /* Weather */
+    .weather {
+      align-self: flex-start; padding: .25rem .7rem; border-radius: 999px;
+      background: var(--surface); border: 1px solid var(--line); color: var(--muted); font-size: .8125rem;
+    }
+
+    /* Place cards, styled like a hawker stall signboard */
+    .stalls { display: flex; flex-direction: column; gap: .5rem; width: min(22rem, 80vw); }
+    .stall {
+      display: block; text-decoration: none; color: var(--ink);
+      background: var(--surface); border: 2px solid var(--green); border-radius: .5rem; overflow: hidden;
+    }
+    .stall:hover .go { text-decoration: underline; }
+    .board {
+      background: var(--green); color: var(--on-green);
+      padding: .55rem .8rem .6rem;
+      font: 800 1.2rem/1.15 var(--display); letter-spacing: -.01em;
+    }
+    .facts { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .9rem; padding: .55rem .8rem; font-size: .875rem; }
+    .badge { padding: .05rem .5rem; border-radius: 999px; font-size: .8125rem; font-weight: 600; }
+    .badge.open { background: var(--uncle); color: var(--uncle-ink); }
+    .badge.closed { background: var(--chilli-bg); color: var(--chilli); }
+    .go { margin-left: auto; color: var(--green); font-weight: 600; }
+
+    /* Starter suggestions */
+    .chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .chip {
+      min-height: 2.75rem; padding: .45rem .95rem; border-radius: 999px;
+      background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+      font: inherit; font-size: .9375rem; cursor: pointer;
+    }
+    .chip:hover { border-color: var(--green); }
+
+    /* Composer */
+    footer { background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+    form { display: flex; gap: .5rem; padding-block: .75rem; }
+    input {
+      flex: 1; min-width: 0; min-height: 2.75rem; padding: .55rem .95rem;
+      font: inherit; font-size: 1rem; color: var(--ink);
+      background: var(--bg); border: 1px solid var(--line); border-radius: 999px;
+    }
+    input::placeholder { color: var(--muted); }
+    .send {
+      flex: none; min-height: 2.75rem; padding: 0 1.2rem; border: 0; border-radius: 999px;
+      background: var(--green); color: var(--on-green); font: 600 1rem var(--body); cursor: pointer;
+    }
+    .send:disabled { opacity: .5; cursor: default; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .dots i { animation: none; opacity: .7; }
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>Lunch Uncle</h1>
-    <p>Tell Uncle what you feel like eating. He is at CT Hub 2, Lavender.</p>
+    <div class="column">
+      <div class="avatar" aria-hidden="true">叔</div>
+      <div class="title">
+        <h1>Lunch Uncle</h1>
+        <p>Knows every lunch spot around CT Hub 2, Lavender</p>
+      </div>
+      <button class="ghost" id="reset" type="button">New chat</button>
+    </div>
   </header>
 
-  <div id="chat"></div>
+  <main id="scroller">
+    <div class="column" id="chat" aria-live="polite"></div>
+  </main>
 
-  <form id="form">
-    <input id="input" placeholder="Uncle, where to eat?" autocomplete="off" autofocus>
-    <button id="send" type="submit">Send</button>
-  </form>
+  <footer>
+    <form class="column" id="form">
+      <label for="input" class="sr-only">Message Uncle</label>
+      <input id="input" placeholder="Uncle, where to eat?" autocomplete="off" enterkeyhint="send">
+      <button class="send" id="send" type="submit">Send</button>
+    </form>
+  </footer>
 
   <script>
+    const STORAGE_KEY = "lunch-uncle:v1";
+    const GREETING = "Eh, what you want to eat? Don't waste my time.";
+    const SUGGESTIONS = [
+      "Cheap lunch below $6",
+      "Somewhere with aircon",
+      "Will it rain later?",
+      "Something fast, got meeting at 1",
+    ];
+
+    const scroller = document.getElementById("scroller");
     const chat = document.getElementById("chat");
     const form = document.getElementById("form");
     const input = document.getElementById("input");
     const send = document.getElementById("send");
+    const reset = document.getElementById("reset");
 
-    // Conversation so far, in the shape the /chat endpoint expects.
-    const history = [];
+    // Each message: {role: "user" | "assistant", content, places?, weather?}
+    // The greeting is local only and never sent to the model.
+    let messages = load();
+    let busy = false;
 
-    function addBubble(role, text) {
-      const div = document.createElement("div");
-      div.className = `bubble ${role === "user" ? "you" : "uncle"}`;
-      div.textContent = text;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-      return div;
+    function load() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (Array.isArray(saved) && saved.length) return saved;
+      } catch {}
+      return [{ role: "assistant", content: GREETING, local: true }];
     }
 
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const message = input.value.trim();
-      if (!message) return;
+    function save() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)); } catch {}
+    }
 
+    function history() {
+      return messages
+        .filter((m) => !m.local)
+        .map(({ role, content }) => ({ role, content }));
+    }
+
+    // Cards already shown, newest first, so Uncle's later replies can reuse them.
+    // Cards saved before ids were added still carry the id in their maps link.
+    function shownPlaces() {
+      return messages
+        .flatMap((m) => m.places ?? [])
+        .reverse()
+        .map(({ id, name, rating, distance_m, open_now, maps_url }) => ({
+          id: id ?? placeIdFrom(maps_url),
+          name, rating, distance_m, open_now,
+        }));
+    }
+
+    function placeIdFrom(url) {
+      try { return new URL(url).searchParams.get("query_place_id"); } catch { return null; }
+    }
+
+    // ---- Rendering ---------------------------------------------------------
+
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text != null) node.textContent = text;
+      return node;
+    }
+
+    // Plain text with **bold** turned into <strong>, without using innerHTML.
+    function richText(target, text) {
+      text.split(/(\*\*[^*]+\*\*)/g).forEach((part) => {
+        if (/^\*\*[^*]+\*\*$/.test(part)) target.append(el("strong", null, part.slice(2, -2)));
+        else if (part) target.append(part);
+      });
+      return target;
+    }
+
+    function stallCard(place) {
+      const card = el("a", "stall");
+      card.href = place.maps_url;
+      card.target = "_blank";
+      card.rel = "noopener";
+      card.append(el("div", "board", place.name));
+
+      const facts = el("div", "facts");
+      if (place.rating != null) facts.append(el("span", null, `★ ${place.rating.toFixed(1)}`));
+      if (place.walk_min != null) facts.append(el("span", null, `${place.walk_min} min walk`));
+      if (place.open_now === true) facts.append(el("span", "badge open", "Open now"));
+      if (place.open_now === false) facts.append(el("span", "badge closed", "Closed"));
+      facts.append(el("span", "go", "Directions"));
+      card.append(facts);
+      return card;
+    }
+
+    function renderMessage(m) {
+      const row = el("div", `msg ${m.role === "user" ? "you" : "uncle"}`);
+      row.append(richText(el("div", "bubble"), m.content));
+      if (m.weather) {
+        const when = m.weather.valid_period ? `, ${m.weather.valid_period}` : "";
+        row.append(el("div", "weather", `${m.weather.forecast} in ${m.weather.area}${when}`));
+      }
+      if (m.places?.length) {
+        const list = el("div", "stalls");
+        m.places.forEach((p) => list.append(stallCard(p)));
+        row.append(list);
+      }
+      return row;
+    }
+
+    function renderSuggestions() {
+      const row = el("div", "chips");
+      SUGGESTIONS.forEach((text) => {
+        const chip = el("button", "chip", text);
+        chip.type = "button";
+        chip.addEventListener("click", () => ask(text));
+        row.append(chip);
+      });
+      return row;
+    }
+
+    function render() {
+      chat.replaceChildren(...messages.map(renderMessage));
+      if (!messages.some((m) => m.role === "user")) chat.append(renderSuggestions());
+      scrollToEnd();
+    }
+
+    function scrollToEnd() {
+      scroller.scrollTop = scroller.scrollHeight;
+    }
+
+    function showThinking() {
+      const row = el("div", "msg uncle");
+      const bubble = el("div", "bubble");
+      const dots = el("span", "dots");
+      dots.setAttribute("aria-hidden", "true");
+      dots.append(el("i"), el("i"), el("i"));
+      bubble.append(dots, el("span", "sr-only", "Uncle is thinking"));
+      row.append(bubble);
+      chat.append(row);
+      scrollToEnd();
+      return row;
+    }
+
+    function showError(text, retryMessage) {
+      const row = el("div", "msg uncle error");
+      row.append(el("div", "bubble", text));
+      const retry = el("button", "ghost", "Try again");
+      retry.type = "button";
+      retry.addEventListener("click", () => { row.remove(); request(retryMessage); });
+      row.append(retry);
+      chat.append(row);
+      scrollToEnd();
+    }
+
+    // ---- Sending -----------------------------------------------------------
+
+    function setBusy(value) {
+      busy = value;
+      send.disabled = value;
+    }
+
+    function ask(text) {
+      const message = text.trim();
+      if (!message || busy) return;
       input.value = "";
-      send.disabled = true;
-      addBubble("user", message);
-      const thinking = addBubble("assistant", "Uncle thinking...");
+      chat.querySelector(".chips")?.remove();
+      chat.append(renderMessage({ role: "user", content: message }));
+      request(message);
+    }
 
+    async function request(message) {
+      setBusy(true);
+      const thinking = showThinking();
       try {
         const res = await fetch("/chat", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ history, message }),
+          body: JSON.stringify({ history: history(), message, places: shownPlaces() }),
         });
-        const data = await res.json();
-        const reply = data.reply ?? data.error ?? "No reply.";
-        thinking.textContent = reply;
-        history.push({ role: "user", content: message });
-        history.push({ role: "assistant", content: reply });
-      } catch (err) {
-        thinking.textContent = "Cannot reach Uncle. Try again.";
+        const data = await res.json().catch(() => ({}));
+        thinking.remove();
+        if (!res.ok || typeof data.reply !== "string") {
+          showError(data.error ?? `Uncle's server returned ${res.status}.`, message);
+          return;
+        }
+        const reply = {
+          role: "assistant",
+          content: data.reply || "Uncle got nothing to say.",
+          places: data.places ?? [],
+          weather: data.weather ?? null,
+        };
+        messages.push({ role: "user", content: message }, reply);
+        save();
+        chat.append(renderMessage(reply));
+        scrollToEnd();
+      } catch {
+        thinking.remove();
+        showError("Cannot reach Uncle. Check your connection and try again.", message);
       } finally {
-        send.disabled = false;
+        setBusy(false);
         input.focus();
       }
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      ask(input.value);
     });
 
-    addBubble("assistant", "Eh, what you want to eat? Don't waste my time.");
+    reset.addEventListener("click", () => {
+      if (busy) return;
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
+      messages = load();
+      render();
+      input.focus();
+    });
+
+    render();
   </script>
 </body>
 </html>
