@@ -1,5 +1,6 @@
 import ui from "./ui.html";
 import { runLoop } from "./loop.js";
+import { cleanEarlierPlaces } from "./cards.js";
 
 export default {
   async fetch(request, env) {
@@ -27,13 +28,13 @@ async function handleChat(request, env) {
     return json({ error: "Body must be JSON" }, 400);
   }
 
-  const { history = [], message } = body;
+  const { history = [], message, places = [] } = body;
   if (typeof message !== "string" || message.trim() === "") {
     return json({ error: "message is required" }, 400);
   }
 
   try {
-    return json(await runLoop(history, message, env));
+    return json(await runLoop(history, message, env, cleanEarlierPlaces(places)));
   } catch (err) {
     console.error("chat failed:", err);
     return json({ error: "Uncle cannot think right now, try again later." }, 500);

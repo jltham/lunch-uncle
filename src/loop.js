@@ -32,8 +32,10 @@ export function llmConfigError(baseUrl, model) {
  * this turn's tool results (see cards.js).
  *
  * history is the prior conversation as OpenAI-style {role, content} messages.
+ * earlierPlaces are the cards already shown in this chat, so places Uncle
+ * names again without a new search still get a card.
  */
-export async function runLoop(history, message, env) {
+export async function runLoop(history, message, env, earlierPlaces = []) {
   const configError = llmConfigError(LLM_BASE_URL, LLM_MODEL);
   if (configError) {
     throw new Error(configError);
@@ -60,7 +62,7 @@ export async function runLoop(history, message, env) {
     const toolCalls = assistant.tool_calls ?? [];
     if (toolCalls.length === 0) {
       const reply = assistant.content ?? "";
-      return { reply, ...buildCards(reply, toolResults) };
+      return { reply, ...buildCards(reply, toolResults, earlierPlaces) };
     }
 
     for (const call of toolCalls) {

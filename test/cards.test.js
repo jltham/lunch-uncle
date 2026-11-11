@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildCards, pickMentionedPlaces, mapsUrl } from "../src/cards.js";
+import { buildCards, pickMentionedPlaces, mapsUrl, cleanEarlierPlaces } from "../src/cards.js";
 
 const places = [
   { id: "a", name: "Tiong Bahru Chicken Rice", rating: 4.2, distance_m: 320, open_now: true },
@@ -32,6 +32,30 @@ test("pickMentionedPlaces ignores spacing and punctuation differences", () => {
   );
 });
 
+test("pickMentionedPlaces matches a name with a Chinese prefix by its English part", () => {
+  const listed = [{ id: "y", name: "藝品海南鸡饭 YiPing Hainanese Chicken Rice" }];
+  assert.deepEqual(
+    pickMentionedPlaces("YiPing Hainanese Chicken Rice, 674m.", listed).map((p) => p.id),
+    ["y"],
+  );
+});
+
+test("pickMentionedPlaces matches a name with words left out in the middle", () => {
+  const listed = [
+    { id: "n", name: "North Bridge Road Market & Food Centre" },
+    { id: "s", name: "Sam Leong St Coffee" },
+  ];
+  assert.deepEqual(
+    pickMentionedPlaces("Go North Bridge Road Food Centre. Or Sam Leong St Chicken Rice.", listed).map((p) => p.id),
+    ["n"],
+  );
+});
+
+test("pickMentionedPlaces does not match on a shared street name alone", () => {
+  const listed = [{ id: "n", name: "North Bridge Road Market & Food Centre" }];
+  assert.deepEqual(pickMentionedPlaces("Walk down North Bridge Road lah.", listed), []);
+});
+
 test("pickMentionedPlaces returns nothing when no place is named", () => {
   assert.deepEqual(pickMentionedPlaces("Cannot decide? Go home lah.", places), []);
 });
@@ -45,6 +69,7 @@ test("buildCards adds walk time and a maps link, and keeps the last good forecas
 
   assert.deepEqual(cards.places, [
     {
+      id: "a",
       name: "Tiong Bahru Chicken Rice",
       rating: 4.2,
       open_now: true,
@@ -67,4 +92,39 @@ test("mapsUrl opens the exact place when it has an id", () => {
   const url = new URL(mapsUrl("Swee Choon", "ChIJ123"));
   assert.equal(url.searchParams.get("query"), "Swee Choon");
   assert.equal(url.searchParams.get("query_place_id"), "ChIJ123");
+});
+
+test("buildCards falls back to places shown earlier, preferring this turn's fresher results", () => {
+  const earlier = [
+    { id: "a", name: "Tiong Bahru Chicken Rice", rating: 4.2, distance_m: 320, open_now: false },
+    { id: "c", name: "Swee Choon", rating: 4.4, distance_m: 900, open_now: false },
+  ];
+  const cards = buildCards(
+    "Swee Choon or Tiong Bahru Chicken Rice lah.",
+    [{ name: "find_lunch_places", result: { places: [places[0]] } }],
+    earlier,
+  );
+  assert.deepEqual(
+    cards.places.map((p) => [p.name, p.open_now]),
+    [["Swee Choon", false], ["Tiong Bahru Chicken Rice", true]],
+  );
+});
+
+test("cleanEarlierPlaces keeps only well-formed fields and caps the list", () => {
+  const cleaned = cleanEarlierPlaces([
+    { id: "ChIJ_ok-1", name: "Swee Choon", rating: 4.4, distance_m: 900, open_now: true, maps_url: "javascript:alert(1)" },
+    { id: "bad id!", name: "Odd Place", rating: "5", distance_m: null, open_now: "yes" },
+    { name: "" },
+    "not an object",
+    ...Array.from({ length: 50 }, (_, i) => ({ name: `Stall ${i}` })),
+  ]);
+  assert.deepEqual(cleaned[0], { id: "ChIJ_ok-1", name: "Swee Choon", rating: 4.4, distance_m: 900, open_now: true });
+  assert.deepEqual(cleaned[1], { id: null, name: "Odd Place", rating: null, distance_m: null, open_now: null });
+  assert.equal(cleaned.length, 30);
+  assert.deepEqual(cleanEarlierPlaces("nope"), []);
+});
+
+test("place cards carry the place id so the page can send them back", () => {
+  const cards = buildCards("Swee Choon.", [{ name: "find_lunch_places", result: { places } }]);
+  assert.equal(cards.places[0].id, "c");
 });

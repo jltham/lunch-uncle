@@ -213,6 +213,22 @@
         .map(({ role, content }) => ({ role, content }));
     }
 
+    // Cards already shown, newest first, so Uncle's later replies can reuse them.
+    // Cards saved before ids were added still carry the id in their maps link.
+    function shownPlaces() {
+      return messages
+        .flatMap((m) => m.places ?? [])
+        .reverse()
+        .map(({ id, name, rating, distance_m, open_now, maps_url }) => ({
+          id: id ?? placeIdFrom(maps_url),
+          name, rating, distance_m, open_now,
+        }));
+    }
+
+    function placeIdFrom(url) {
+      try { return new URL(url).searchParams.get("query_place_id"); } catch { return null; }
+    }
+
     // ---- Rendering ---------------------------------------------------------
 
     function el(tag, className, text) {
@@ -331,7 +347,7 @@
         const res = await fetch("/chat", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ history: history(), message }),
+          body: JSON.stringify({ history: history(), message, places: shownPlaces() }),
         });
         const data = await res.json().catch(() => ({}));
         thinking.remove();
